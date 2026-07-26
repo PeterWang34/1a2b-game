@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3 位數 1A2B 猜數字</title>
+  <style>
+    :root{--bg:#f4f7fb;--card:#fff;--text:#182230;--muted:#667085;--primary:#2563eb;--border:#d0d5dd;--success:#067647;--success-bg:#ecfdf3;--error:#b42318;--error-bg:#fef3f2}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Arial,"Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text);padding:24px}
+    .container{width:min(760px,100%);margin:0 auto}h1{text-align:center;margin:0 0 8px;font-size:clamp(28px,5vw,42px)}.subtitle{text-align:center;color:var(--muted);margin:0 0 24px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:18px;box-shadow:0 8px 24px rgba(16,24,40,.06)}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.stat{padding:14px;border:1px solid var(--border);border-radius:14px;text-align:center}.stat-label{color:var(--muted);font-size:14px}.stat-value{margin-top:5px;font-size:22px;font-weight:700}
+    .input-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:end}label{display:block;font-weight:700}input{width:100%;margin-top:8px;padding:13px 14px;border:1px solid var(--border);border-radius:12px;font-size:20px;letter-spacing:6px;outline:none}input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+    button{border:0;border-radius:12px;padding:13px 18px;font-size:16px;font-weight:700;cursor:pointer}.primary{background:var(--primary);color:white}.secondary{background:#eef2f6;color:var(--text)}button:disabled{opacity:.55;cursor:not-allowed}
+    .message{margin-top:16px;padding:13px 14px;border-radius:12px;background:#eff6ff;color:#1e40af;min-height:48px}.message.success{background:var(--success-bg);color:var(--success)}.message.error{background:var(--error-bg);color:var(--error)}
+    table{width:100%;border-collapse:collapse}th,td{padding:12px;text-align:center;border-bottom:1px solid var(--border)}th{background:#f8fafc}.result{display:inline-block;min-width:70px;padding:5px 10px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-weight:700}.rules{color:var(--muted);line-height:1.8}
+    @media(max-width:620px){body{padding:14px}.stats{grid-template-columns:1fr}.input-row{grid-template-columns:1fr}button{width:100%}}
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>3 位數 1A2B</h1><p class="subtitle">猜出三個不重複的數字</p>
+    <section class="card stats">
+      <div class="stat"><div class="stat-label">數字長度</div><div class="stat-value">3 位數</div></div>
+      <div class="stat"><div class="stat-label">猜測次數</div><div id="guessCount" class="stat-value">0</div></div>
+      <div class="stat"><div class="stat-label">遊戲狀態</div><div id="gameStatus" class="stat-value">進行中</div></div>
+    </section>
+    <section class="card">
+      <div class="input-row">
+        <label>請輸入三個不重複的數字<input id="guessInput" type="text" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="例如 507" /></label>
+        <button id="guessButton" class="primary" type="button">送出猜測</button>
+        <button id="restartButton" class="secondary" type="button">重新開始</button>
+      </div>
+      <div id="message" class="message" aria-live="polite">遊戲已開始，請輸入第一組數字。</div>
+    </section>
+    <section class="card"><h2>猜測紀錄</h2><table><thead><tr><th>次數</th><th>猜測</th><th>結果</th></tr></thead><tbody id="historyBody"><tr id="emptyRow"><td colspan="3">目前還沒有猜測紀錄。</td></tr></tbody></table></section>
+    <section class="card rules"><strong>規則：</strong><br>A：數字正確，而且位置也正確。<br>B：數字正確，但位置不正確。<br>例如答案是 507，猜 527 會得到 2A0B；猜 750 會得到 0A3B。</section>
+  </main>
+<script>
+const guessInput=document.getElementById('guessInput'),guessButton=document.getElementById('guessButton'),restartButton=document.getElementById('restartButton'),message=document.getElementById('message'),historyBody=document.getElementById('historyBody'),guessCount=document.getElementById('guessCount'),gameStatus=document.getElementById('gameStatus');
+let answer='',attempts=0,gameOver=false;
+function createAnswer(){const d=['0','1','2','3','4','5','6','7','8','9'];for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]]}if(d[0]==='0'){const k=d.findIndex((x,i)=>i>0&&x!=='0');[d[0],d[k]]=[d[k],d[0]]}return d.slice(0,3).join('')}
+function validateGuess(v){if(!/^\d{3}$/.test(v))return'請輸入剛好 3 個數字。';if(v[0]==='0')return'第一位不能是 0。';if(new Set(v).size!==3)return'三個數字不能重複。';return''}
+function evaluateGuess(v){let a=0,b=0;for(let i=0;i<3;i++){if(v[i]===answer[i])a++;else if(answer.includes(v[i]))b++}return{a,b}}
+function showMessage(t,type=''){message.textContent=t;message.className='message';if(type)message.classList.add(type)}
+function addHistory(v,r){const e=document.getElementById('emptyRow');if(e)e.remove();const row=document.createElement('tr');row.innerHTML=`<td>${attempts}</td><td><strong>${v}</strong></td><td><span class="result">${r.a}A${r.b}B</span></td>`;historyBody.prepend(row)}
+function submitGuess(){if(gameOver){showMessage('這局已經結束，請按「重新開始」。','error');return}const v=guessInput.value.trim(),err=validateGuess(v);if(err){showMessage(err,'error');guessInput.focus();return}attempts++;const r=evaluateGuess(v);addHistory(v,r);guessCount.textContent=attempts;if(r.a===3){gameOver=true;gameStatus.textContent='猜中了';showMessage(`恭喜！答案是 ${answer}，你總共猜了 ${attempts} 次。`,'success');guessButton.disabled=true;guessInput.disabled=true}else{showMessage(`${v} 的結果是 ${r.a}A${r.b}B，請繼續猜。`);guessInput.value='';guessInput.focus()}}
+function restartGame(){answer=createAnswer();attempts=0;gameOver=false;guessCount.textContent='0';gameStatus.textContent='進行中';historyBody.innerHTML='<tr id="emptyRow"><td colspan="3">目前還沒有猜測紀錄。</td></tr>';guessInput.disabled=false;guessButton.disabled=false;guessInput.value='';showMessage('新遊戲已開始，請輸入第一組數字。');guessInput.focus()}
+guessButton.addEventListener('click',submitGuess);restartButton.addEventListener('click',restartGame);guessInput.addEventListener('keydown',e=>{if(e.key==='Enter')submitGuess()});guessInput.addEventListener('input',()=>{guessInput.value=guessInput.value.replace(/\D/g,'').slice(0,3)});restartGame();
+</script>
+</body>
+</html>
